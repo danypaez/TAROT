@@ -1,107 +1,84 @@
-from flask import Flask, render_template, request, jsonify
+import streamlit as st
+from philosopher_ai import responder
 from gtts import gTTS
 import uuid
 import os
 
-# =========================
-# IA FILÓSOFO
-# =========================
-from philosopher_ai import responder
+# -------------------
+# Configuración
+# -------------------
 
-app = Flask(
-    __name__,
-    static_folder="static",
-    template_folder="templates"
+st.set_page_config(
+    page_title="Tarot Terapéutico",
+    page_icon="✨",
+    layout="centered"
 )
 
-# =========================
-# HOME
-# =========================
-@app.route("/")
-def home():
+st.title("✨ Tarot Terapéutico y Espiritualidad Universal")
 
-    return render_template("index.html")
+st.write(
+    "Un espacio de reflexión, autoconocimiento y conexión con la energía creadora."
+)
 
-# =========================
-# CHAT IA
-# =========================
-@app.route("/chat", methods=["POST"])
-def chat():
+# -------------------
+# Datos del usuario
+# -------------------
 
-    data = request.get_json()
+nombre = st.text_input("Tu nombre")
 
-    nombre = data.get("nombre", "")
-    mensaje = data.get("mensaje", "")
+mensaje = st.text_area(
+    "¿Qué deseas compartir hoy?"
+)
 
-    print("NOMBRE:", nombre)
-    print("MENSAJE:", mensaje)
+# -------------------
+# Botón de consulta
+# -------------------
+
+if st.button("Consultar"):
 
     if not mensaje:
 
-        return jsonify({
-            "response": "Compartime aquello que sentís en este momento."
-        })
+        st.warning(
+            "Compartime aquello que sentís en este momento."
+        )
 
-    try:
+    else:
 
-        respuesta = responder(nombre, mensaje)
+        try:
 
-        print("RESPUESTA IA:", respuesta)
+            respuesta = responder(
+                nombre,
+                mensaje
+            )
 
-        return jsonify({
-            "response": respuesta
-        })
+            st.markdown("### Reflexión")
 
-    except Exception as e:
+            st.write(respuesta)
 
-        print("ERROR CHAT:", e)
+            # Generar audio
 
-        return jsonify({
-            "response":
-            "En este momento no logro conectar con la reflexión universal."
-        })
+            os.makedirs("temp", exist_ok=True)
 
-# =========================
-# VOZ
-# =========================
-@app.route("/voz", methods=["POST"])
-def voz():
+            archivo = f"temp/voz_{uuid.uuid4().hex}.mp3"
 
-    data = request.get_json()
+            tts = gTTS(
+                text=respuesta,
+                lang="es"
+            )
 
-    texto = data.get("texto", "")
+            tts.save(archivo)
 
-    if not texto:
+            with open(archivo, "rb") as audio:
 
-        return jsonify({
-            "audio": ""
-        })
+                st.audio(
+                    audio.read(),
+                    format="audio/mp3"
+                )
 
-    try:
+        except Exception as e:
 
-        os.makedirs("static", exist_ok=True)
+            st.error(
+                "En este momento no logro conectar con la reflexión universal."
+            )
 
-        filename = f"static/voz_{uuid.uuid4().hex}.mp3"
-
-        tts = gTTS(text=texto, lang="es")
-
-        tts.save(filename)
-
-        return jsonify({
-            "audio": "/" + filename
-        })
-
-    except Exception as e:
-
-        print("ERROR VOZ:", e)
-
-        return jsonify({
-            "audio": ""
-        })
-
-# =========================
-# MAIN
-# =========================
-if __name__ == "__main__":
-
-    app.run(debug=True)
+            st.write(e)
