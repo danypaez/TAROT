@@ -2,3 +2,5 @@ flask
 python-dotenv
 gtts
 google-generativeai
+streamlit
+openai
